@@ -1,12 +1,12 @@
 # Desafio Backend Pleno — Orquestrador de Pedidos
 
-## Objetivo
-Criar uma API backend que:
+Criar uma API que:
 1. Receba pedidos via **webhook**.
 2. **Valide** e **enfileire** para processamento assíncrono.
 3. **Enriqueça os dados** do pedido consultando um **serviço externo**.
 4. Utilize **filas** para processamento e **mecanismos de retry** em caso de falhas.
 5. Demonstre **boas práticas de código e arquitetura**.
+6. Utilizar **NestJS**.
 
 ---
 
@@ -63,6 +63,5 @@ Os testes são opcionais, mas podem demonstrar melhor sua capacidade de estrutur
 É importante que o fluxo da **fila** esteja representado nos testes, validando o processamento assíncrono e as transições de status.
 
 ---
-
-## Entregáveis
-- Repositório público (GitHub ou GitLab) com o código do desafio implementado.
+### Entregáveis
+Repositório público (GitHub ou GitLab) com o código do desafio implementado.
