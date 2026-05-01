@@ -5,10 +5,14 @@ import { OrderStatus } from '../domain/enums/order-status-enum';
 import { CreateOrderWebhookDto } from '../presentation/dtos/create-order.dto';
 import { ResponseOrderDto } from '../presentation/dtos/response-order.dto';
 import { IOrderRepository } from '../domain/repositories/order.repository';
+import { IOrderQueue } from '../domain/queues/order.queue';
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly ordersRepository: IOrderRepository) {}
+  constructor(
+    private readonly ordersRepository: IOrderRepository,
+    private readonly queueRepository: IOrderQueue,
+  ) {}
 
   async receiveOrder(
     payload: CreateOrderWebhookDto,
@@ -24,6 +28,7 @@ export class OrderService {
     order.status = OrderStatus.RECEIVED;
 
     const saved = await this.ordersRepository.save(order);
+    await this.queueRepository.enqueue({ order_id: saved.id });
     return this.toResponse(saved);
   }
 
