@@ -6,9 +6,11 @@ import { BullModule } from '@nestjs/bullmq';
 import { OrderEntity } from './infrastructure/persistance/order.entity';
 import { TypeOrmOrderRepository } from './infrastructure/persistance/typeorm-order.repository';
 import { IOrderRepository } from './domain/repositories/order.repository';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
+    HttpModule,
     TypeOrmModule.forFeature([OrderEntity]),
     BullModule.registerQueue({
       name: 'orders',
