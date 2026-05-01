@@ -6,11 +6,11 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { OrderStatus } from '../enums/order-status-enum';
-import { OrderItem } from '../types/order.type';
+import { OrderStatus } from '../../domain/enums/order-status-enum';
+import { OrderItem } from '../../domain/types/order.type';
 
 @Entity('orders')
-export class Order {
+export class OrderEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 

@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { CreateOrderWebhookDto } from '../../contracts/http/create-order.dto';
-import { ResponseOrderDto } from '../../contracts/http/response-order.dto';
-import { OrderService } from '../services/orders.service';
+import { CreateOrderWebhookDto } from '../dtos/create-order.dto';
+import { ResponseOrderDto } from '../dtos/response-order.dto';
+import { OrderService } from '../../application/orders.service';
 
 @Controller('webhooks')
 export class WebhookController {

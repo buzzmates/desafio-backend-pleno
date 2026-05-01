@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Order } from './entities/order.entity';
-import { OrderService } from './services/orders.service';
-import { WebhookController } from './controllers/webhooks.controller';
+import { OrderService } from './application/orders.service';
+import { WebhookController } from './presentation/controllers/webhooks.controller';
 import { BullModule } from '@nestjs/bullmq';
+import { OrderEntity } from './infrastructure/persistance/order.entity';
+import { TypeOrmOrderRepository } from './infrastructure/persistance/typeorm-order.repository';
+import { IOrderRepository } from './domain/repositories/order.repository';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order]),
+    TypeOrmModule.forFeature([OrderEntity]),
     BullModule.registerQueue({
       name: 'orders',
     }),
@@ -15,7 +17,13 @@ import { BullModule } from '@nestjs/bullmq';
       name: 'orders-dlq',
     }),
   ],
-  providers: [OrderService],
+  providers: [
+    OrderService,
+    {
+      provide: IOrderRepository,
+      useClass: TypeOrmOrderRepository,
+    },
+  ],
   controllers: [WebhookController],
   exports: [OrderService],
 })

@@ -3,7 +3,3 @@ export type OrderItem = {
   qty: number;
   unit_price: number;
 };
-
-export type PgDriverError = {
-  code?: string;
-};
