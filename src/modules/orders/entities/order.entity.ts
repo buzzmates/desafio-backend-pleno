@@ -1,6 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { OrderStatus } from '../enums/order-status-enum';
-import { OrderItem } from './types/order.type';
+import { OrderItem } from '../types/order.type';
 
 @Entity('orders')
 export class Order {
@@ -8,6 +15,7 @@ export class Order {
   id!: string;
 
   @Column()
+  @Index()
   order_id!: string;
 
   @Column({ unique: true })
@@ -34,4 +42,10 @@ export class Order {
     default: OrderStatus.RECEIVED,
   })
   status!: OrderStatus;
+
+  @CreateDateColumn()
+  created_at!: Date;
+
+  @UpdateDateColumn()
+  updated_at!: Date;
 }
