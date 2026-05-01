@@ -1,4 +1,4 @@
-import { OrderStatus } from 'src/modules/orders/enums/order-status-enum';
+import { OrderStatus } from '../../orders/enums/order-status-enum';
 
 export class ResponseOrderDto {
   id!: string;

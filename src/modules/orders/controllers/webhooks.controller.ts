@@ -1,13 +1,16 @@
-// import { Body, Controller, Post } from '@nestjs/common';
-// import { CreateOrderWebhookDto } from 'src/modules/contracts/http/create-order.dto';
-// import { ResponseOrderDto } from 'src/modules/contracts/http/response-order.dto';
+import { Body, Controller, Post } from '@nestjs/common';
+import { CreateOrderWebhookDto } from '../../contracts/http/create-order.dto';
+import { ResponseOrderDto } from '../../contracts/http/response-order.dto';
+import { OrderService } from '../services/orders.service';
 
-// @Controller('webhooks')
-// export class WebhookController {
-//   @Post('orders')
-//   async receiveOrder(
-//     @Body() bodyWebhook: CreateOrderWebhookDto,
-//   ): Promise<ResponseOrderDto> {
-//     return console.log(bodyWebhook);
-//   }
-// }
+@Controller('webhooks')
+export class WebhookController {
+  constructor(private readonly orderService: OrderService) {}
+
+  @Post('orders')
+  async receiveOrder(
+    @Body() bodyWebhook: CreateOrderWebhookDto,
+  ): Promise<ResponseOrderDto> {
+    return this.orderService.receiveOrder(bodyWebhook);
+  }
+}

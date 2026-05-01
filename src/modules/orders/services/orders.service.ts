@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateOrderWebhookDto } from 'src/modules/contracts/http/create-order.dto';
-import { ResponseOrderDto } from 'src/modules/contracts/http/response-order.dto';
-import { Repository } from 'typeorm';
+
+import { QueryFailedError, Repository } from 'typeorm';
 import { Order } from '../entities/order.entity';
 import { OrderStatus } from '../enums/order-status-enum';
+import { CreateOrderWebhookDto } from '../../contracts/http/create-order.dto';
+import { ResponseOrderDto } from '../../contracts/http/response-order.dto';
+import { PgDriverError } from '../types/order.type';
 
 @Injectable()
 export class OrderService {
@@ -16,14 +18,6 @@ export class OrderService {
   async receiveOrder(
     payload: CreateOrderWebhookDto,
   ): Promise<ResponseOrderDto> {
-    const existingOrder = await this.ordersRepository.findOne({
-      where: { idempotency_key: payload.idempotency_key },
-    });
-
-    if (existingOrder) {
-      return this.toResponse(existingOrder);
-    }
-
     const totalAmont = this.calculateTotalAmount(payload);
 
     const order = this.ordersRepository.create({
@@ -37,9 +31,20 @@ export class OrderService {
       status: OrderStatus.RECEIVED,
     });
 
-    const savedOrder = await this.ordersRepository.save(order);
+    try {
+      const savedOrder = await this.ordersRepository.save(order);
+      return this.toResponse(savedOrder);
+    } catch (error) {
+      if (!this.isUniqueViolation(error)) {
+        throw error;
+      }
 
-    return this.toResponse(savedOrder);
+      const existingOrder = await this.ordersRepository.findOneOrFail({
+        where: { idempotency_key: payload.idempotency_key },
+      });
+
+      return this.toResponse(existingOrder);
+    }
   }
 
   private toResponse(order: Order): ResponseOrderDto {
@@ -52,6 +57,13 @@ export class OrderService {
     };
   }
 
+  private isUniqueViolation(error: unknown): boolean {
+    return (
+      error instanceof QueryFailedError &&
+      (error as QueryFailedError & { driverError?: PgDriverError }).driverError
+        ?.code === '23505'
+    );
+  }
   private calculateTotalAmount(payload: CreateOrderWebhookDto) {
     return payload.items.reduce((total, item) => {
       return total + item.qty * item.unit_price;
