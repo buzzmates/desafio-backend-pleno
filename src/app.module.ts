@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { BullModule } from '@nestjs/bullmq';
 import { OrdersModule } from './modules/orders/orders.module';
 
 @Module({
@@ -10,6 +11,12 @@ import { OrdersModule } from './modules/orders/orders.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+    BullModule.forRoot({
+      connection: {
+        host: 'localhost',
+        port: 6380,
+      },
     }),
     TypeOrmModule.forRoot({
       type: process.env.DB_TYPE as 'postgres',
