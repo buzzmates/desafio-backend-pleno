@@ -55,4 +55,37 @@ export class QueueMetricsService {
       },
     ];
   }
+
+  async retryDlq() {
+    const jobs = await this.dlqQueue.getJobs(['waiting']);
+
+    let requeued = 0;
+
+    for (const job of jobs) {
+      const orderId = job.data?.order_id;
+
+      if (typeof orderId !== 'string' || orderId.length === 0) {
+        continue;
+      }
+
+      await this.ordersQueue.add(
+        'process-order',
+        { order_id: orderId },
+        {
+          attempts: 5,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
+          },
+          removeOnComplete: 100,
+          removeOnFail: false,
+        },
+      );
+
+      await job.remove();
+      requeued += 1;
+    }
+
+    return { requeued };
+  }
 }

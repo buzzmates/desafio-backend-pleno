@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post } from '@nestjs/common';
 import {
   QueueMetrics,
   QueueMetricsService,
@@ -11,5 +11,10 @@ export class QueueController {
   @Get('metrics')
   async getMetrics(): Promise<QueueMetrics[]> {
     return this.queueMetricsService.getMetrics();
+  }
+
+  @Post('retry-dlq')
+  async retryDlq() {
+    return this.queueMetricsService.retryDlq();
   }
 }

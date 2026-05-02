@@ -7,6 +7,7 @@ import { IOrderRepository } from '../domain/repositories/order.repository';
 import { IOrderQueue } from '../domain/queues/order.queue';
 import { OrderStatus } from '../domain/enums/order-status-enum';
 import { OrderNotFound } from '../domain/errors/order-not-found.error';
+import { ResponseDetailOrder } from '../presentation/dtos/response-details-order.dto';
 
 @Injectable()
 export class OrderService {
@@ -34,17 +35,36 @@ export class OrderService {
     };
   }
 
-  async findById(id: string): Promise<ResponseOrderDto> {
+  private toDetail(order: Order): ResponseDetailOrder {
+    return {
+      id: order.id,
+      order_id: order.order_id,
+      idempotency_key: order.idempotency_key,
+      status: order.status,
+      customer: {
+        name: order.customer_name,
+        email: order.customer_email,
+      },
+      items: order.items,
+      currency: order.currency,
+      total_amount: order.total_amount,
+      converted_amount: order.converted_amount ?? null,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+    };
+  }
+
+  async findById(id: string): Promise<ResponseDetailOrder> {
     const order = await this.ordersRepository.findById(id);
     if (!order) {
       throw new OrderNotFound();
     }
 
-    return order;
+    return this.toDetail(order);
   }
 
   async findAll(status?: OrderStatus): Promise<ResponseOrderDto[]> {
     const orders = await this.ordersRepository.findAll(status);
-    return orders;
+    return orders.map((order) => this.toResponse(order));
   }
 }
