@@ -17,20 +17,21 @@ export class EnrichmentService {
       throw new Error(`Order not found: ${orderId}`);
     }
 
-    try {
-      const converted = await this.exchangeRateService.convert(
-        order.currency,
-        'BRL',
-        order.total_amount,
-      );
-      order.converted_amount = converted;
-      order.status = OrderStatus.ENRICHED;
-    } catch (error) {
-      order.status = OrderStatus.FAILED_ENRICHMENT;
-      await this.orderRepository.save(order);
-      throw error;
-    }
+    const converted = await this.exchangeRateService.convert(
+      order.currency,
+      'BRL',
+      order.total_amount,
+    );
+    order.converted_amount = converted;
+    order.status = OrderStatus.ENRICHED;
 
+    await this.orderRepository.save(order);
+  }
+
+  async markAsFailed(orderId: string): Promise<void> {
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) return;
+    order.status = OrderStatus.FAILED_ENRICHMENT;
     await this.orderRepository.save(order);
   }
 }

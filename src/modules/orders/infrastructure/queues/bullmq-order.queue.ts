@@ -17,7 +17,7 @@ export class BullMQOrderQueue extends IOrderQueue {
         type: 'exponential',
         delay: 2000,
       },
-      removeOnComplete: true,
+      removeOnComplete: 100,
       removeOnFail: false,
     });
   }

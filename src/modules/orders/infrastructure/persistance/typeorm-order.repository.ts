@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
-import { IOrderRepository } from '../../domain/repositories/order.repository';
+import {
+  CreateIfAbsentResult,
+  IOrderRepository,
+} from '../../domain/repositories/order.repository';
 import { OrderEntity } from './order.entity';
 import { Order } from '../../domain/entities/order';
 import { OrderMapper } from './order.mapper';
@@ -60,5 +63,49 @@ export class TypeOrmOrderRepository extends IOrderRepository {
     });
 
     return entities.map(OrderMapper.toDomain);
+  }
+
+  async createIfAbsent(order: Order): Promise<CreateIfAbsentResult> {
+    try {
+      const entity = this.repo.create(OrderMapper.toPersistence(order));
+
+      const insertResult = await this.repo.insert(entity);
+      const insertedId = insertResult.identifiers[0]?.id;
+
+      if (!insertedId) {
+        throw new Error('Insert succeeded but no id was returned');
+      }
+      const rawInsertedId: unknown = insertResult.identifiers[0]?.id;
+
+      if (typeof rawInsertedId !== 'string' || rawInsertedId.length === 0) {
+        throw new Error('Insert succeeded but no valid string id was returned');
+      }
+
+      const createdOrder = await this.findById(rawInsertedId);
+
+      if (!createdOrder) {
+        throw new Error(`Inserted order not found: ${insertedId}`);
+      }
+
+      return {
+        order: createdOrder,
+        created: true,
+      };
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        const existing = await this.findByIdempotencyKey(order.idempotency_key);
+
+        if (!existing) {
+          throw error;
+        }
+
+        return {
+          order: existing,
+          created: false,
+        };
+      }
+
+      throw error;
+    }
   }
 }

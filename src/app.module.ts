@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { BullModule } from '@nestjs/bullmq';
 import { OrdersModule } from './modules/orders/orders.module';
 
@@ -14,8 +12,8 @@ import { OrdersModule } from './modules/orders/orders.module';
     }),
     BullModule.forRoot({
       connection: {
-        host: 'localhost',
-        port: 6380,
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT),
       },
     }),
     TypeOrmModule.forRoot({
@@ -30,7 +28,5 @@ import { OrdersModule } from './modules/orders/orders.module';
     }),
     OrdersModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

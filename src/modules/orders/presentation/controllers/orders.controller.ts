@@ -1,12 +1,36 @@
-// import { Body, Controller, Post } from '@nestjs/common';
-// import { CreateOrderWebhookDto } from '../../contracts/http/create-order.dto';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  ParseEnumPipe,
+  Query,
+} from '@nestjs/common';
+import { OrderService } from '../../application/orders.service';
+import { ResponseOrderDto } from '../dtos/response-order.dto';
+import { OrderStatus } from '../../domain/enums/order-status-enum';
+import { OrderNotFound } from '../../domain/errors/order-not-found.error';
 
-// @Controller('orders')
-// export class OrdersController {
-//   constructor(private readonly ordersService: OrdersController) {}
+@Controller('orders')
+export class OrdersController {
+  constructor(private readonly orderService: OrderService) {}
 
-//   @Post()
-//   async receiveOrder(@Body() createWebhook: CreateOrderWebhookDto) {
-//     return this.ordersService.receiveOrder(createWebhook);
-//   }
-// }
+  @Get(':id')
+  async findById(@Param('id') id: string): Promise<ResponseOrderDto> {
+    try {
+      return await this.orderService.findById(id);
+    } catch (error) {
+      if (error instanceof OrderNotFound) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
+  }
+  @Get()
+  async findAll(
+    @Query('status', new ParseEnumPipe(OrderStatus, { optional: true }))
+    status?: OrderStatus,
+  ): Promise<ResponseOrderDto[]> {
+    return this.orderService.findAll(status);
+  }
+}

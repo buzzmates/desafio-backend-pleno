@@ -34,11 +34,17 @@ export class OrderProcessor extends WorkerHost {
       this.logger.error(
         `Order ${job.data.order_id} exhausted all retries. Moving to DLQ. Error: ${error.message}`,
       );
+      await this.enrichmentService.markAsFailed(job.data.order_id);
       await this.dlqQueue.add('dead-order', {
         ...job.data,
         reason: error.message,
         failedAt: new Date().toISOString(),
       });
     }
+  }
+
+  @OnWorkerEvent('completed')
+  onCompleted(job: Job<EnqueueOrderPayload>) {
+    this.logger.log(`Order ${job.data.order_id} processed successfully`);
   }
 }
