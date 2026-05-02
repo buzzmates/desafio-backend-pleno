@@ -36,6 +36,9 @@ export class OrderEntity {
   @Column({ type: 'numeric' })
   total_amount!: number;
 
+  @Column({ type: 'numeric', nullable: true })
+  converted_amount!: number;
+
   @Column({
     type: 'enum',
     enum: OrderStatus,

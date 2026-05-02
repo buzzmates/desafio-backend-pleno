@@ -17,6 +17,12 @@ export class OrderService {
   async receiveOrder(
     payload: CreateOrderWebhookDto,
   ): Promise<ResponseOrderDto> {
+    const existing = await this.ordersRepository.findByIdempotencyKey(
+      payload.idempotency_key,
+    );
+    if (existing) {
+      return this.toResponse(existing);
+    }
     const order = new Order();
     order.order_id = payload.order_id;
     order.idempotency_key = payload.idempotency_key;

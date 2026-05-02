@@ -10,6 +10,7 @@ export class Order {
   items!: OrderItem[];
   currency!: string;
   total_amount!: number;
+  converted_amount!: number;
   status!: OrderStatus;
   created_at!: Date;
   updated_at!: Date;

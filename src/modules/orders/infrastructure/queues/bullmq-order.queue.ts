@@ -11,6 +11,14 @@ export class BullMQOrderQueue extends IOrderQueue {
   }
 
   async enqueue(data: EnqueueOrderPayload): Promise<void> {
-    await this.queue.add('process-order', data);
+    await this.queue.add('process-order', data, {
+      attempts: 5,
+      backoff: {
+        type: 'exponential',
+        delay: 2000,
+      },
+      removeOnComplete: true,
+      removeOnFail: false,
+    });
   }
 }
