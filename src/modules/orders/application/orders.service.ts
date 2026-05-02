@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 
 import { Order } from '../domain/entities/order';
-import { OrderStatus } from '../domain/enums/order-status-enum';
-import { CreateOrderWebhookDto } from '../presentation/dtos/create-order.dto';
+import { CreateOrderCommand } from '../domain/types/order.type';
 import { ResponseOrderDto } from '../presentation/dtos/response-order.dto';
 import { IOrderRepository } from '../domain/repositories/order.repository';
 import { IOrderQueue } from '../domain/queues/order.queue';
+import { OrderStatus } from '../domain/enums/order-status-enum';
+import { OrderNotFound } from '../domain/errors/order-not-found.error';
 
 @Injectable()
 export class OrderService {
@@ -14,28 +15,13 @@ export class OrderService {
     private readonly queueRepository: IOrderQueue,
   ) {}
 
-  async receiveOrder(
-    payload: CreateOrderWebhookDto,
-  ): Promise<ResponseOrderDto> {
-    const existing = await this.ordersRepository.findByIdempotencyKey(
-      payload.idempotency_key,
-    );
-    if (existing) {
-      return this.toResponse(existing);
+  async receiveOrder(command: CreateOrderCommand): Promise<ResponseOrderDto> {
+    const order = Order.create(command);
+    const result = await this.ordersRepository.createIfAbsent(order);
+    if (result.created) {
+      await this.queueRepository.enqueue({ order_id: result.order.id });
     }
-    const order = new Order();
-    order.order_id = payload.order_id;
-    order.idempotency_key = payload.idempotency_key;
-    order.customer_name = payload.customer.name;
-    order.customer_email = payload.customer.email;
-    order.items = payload.items;
-    order.currency = payload.currency;
-    order.total_amount = this.calculateTotalAmount(payload);
-    order.status = OrderStatus.RECEIVED;
-
-    const saved = await this.ordersRepository.save(order);
-    await this.queueRepository.enqueue({ order_id: saved.id });
-    return this.toResponse(saved);
+    return this.toResponse(result.order);
   }
 
   private toResponse(order: Order): ResponseOrderDto {
@@ -48,9 +34,17 @@ export class OrderService {
     };
   }
 
-  private calculateTotalAmount(payload: CreateOrderWebhookDto) {
-    return payload.items.reduce((total, item) => {
-      return total + item.qty * item.unit_price;
-    }, 0);
+  async findById(id: string): Promise<ResponseOrderDto> {
+    const order = await this.ordersRepository.findById(id);
+    if (!order) {
+      throw new OrderNotFound();
+    }
+
+    return order;
+  }
+
+  async findAll(status?: OrderStatus): Promise<ResponseOrderDto[]> {
+    const orders = await this.ordersRepository.findAll(status);
+    return orders;
   }
 }
