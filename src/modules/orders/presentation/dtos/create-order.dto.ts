@@ -1,10 +1,13 @@
 import {
+  ArrayMinSize,
   IsArray,
   IsEmail,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsPositive,
   IsString,
+  Length,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -12,14 +15,17 @@ import { Type } from 'class-transformer';
 
 class CustomerDto {
   @IsEmail()
+  @IsNotEmpty()
   email!: string;
 
   @IsString()
+  @IsNotEmpty()
   name!: string;
 }
 
 class OrderItemDto {
   @IsString()
+  @IsNotEmpty()
   sku!: string;
 
   @IsInt()
@@ -33,6 +39,7 @@ class OrderItemDto {
 
 export class CreateOrderWebhookDto {
   @IsString()
+  @IsNotEmpty()
   order_id!: string;
 
   @ValidateNested()
@@ -40,13 +47,16 @@ export class CreateOrderWebhookDto {
   customer!: CustomerDto;
 
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items!: OrderItemDto[];
 
   @IsString()
+  @Length(3, 3)
   currency!: string;
 
   @IsString()
+  @IsNotEmpty()
   idempotency_key!: string;
 }

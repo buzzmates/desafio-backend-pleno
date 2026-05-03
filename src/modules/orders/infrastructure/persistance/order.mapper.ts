@@ -12,7 +12,8 @@ export class OrderMapper {
     order.items = entity.items;
     order.currency = entity.currency;
     order.total_amount = Number(entity.total_amount);
-    order.converted_amount = Number(entity.converted_amount);
+    order.converted_amount =
+      entity.converted_amount == null ? null : Number(entity.converted_amount);
     order.status = entity.status;
     order.created_at = entity.created_at;
     order.updated_at = entity.updated_at;
@@ -29,7 +30,7 @@ export class OrderMapper {
       items: order.items,
       currency: order.currency,
       total_amount: order.total_amount,
-      converted_amount: order.converted_amount,
+      converted_amount: order.converted_amount ?? null,
       status: order.status,
     };
   }
