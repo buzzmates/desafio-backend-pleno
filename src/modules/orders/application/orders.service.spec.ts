@@ -30,7 +30,7 @@ describe('OrderService', () => {
     items: [{ sku: 'ABC123', qty: 2, unit_price: 59.9 }],
     currency: 'USD',
     total_amount: 119.8,
-    converted_amount: 650.12,
+    converted_amount: null,
     status: OrderStatus.RECEIVED,
     created_at: new Date('2026-05-03T10:00:00.000Z'),
     updated_at: new Date('2026-05-03T10:05:00.000Z'),
@@ -119,7 +119,10 @@ describe('OrderService', () => {
   });
 
   it('returns detail when finding an order by id', async () => {
-    const order = makeOrder({ status: OrderStatus.ENRICHED });
+    const order = makeOrder({
+      status: OrderStatus.ENRICHED,
+      converted_amount: 650.12,
+    });
 
     ordersRepo.findById.mockResolvedValue(order);
 
@@ -157,6 +160,7 @@ describe('OrderService', () => {
         order_id: 'ext-456',
         idempotency_key: 'key-456',
         status: OrderStatus.ENRICHED,
+        converted_amount: 601.23,
       }),
     ];
 

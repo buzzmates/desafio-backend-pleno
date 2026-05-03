@@ -19,7 +19,7 @@ describe('EnrichmentService', () => {
     items: [{ sku: 'ABC123', qty: 2, unit_price: 59.9 }],
     currency: 'USD',
     total_amount: 119.8,
-    converted_amount: 0,
+    converted_amount: null,
     status: OrderStatus.RECEIVED,
     created_at: new Date('2026-05-03T10:00:00.000Z'),
     updated_at: new Date('2026-05-03T10:05:00.000Z'),
