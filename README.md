@@ -59,19 +59,19 @@ Exemplos de pontos que eu melhoraria:
 
 Este repositorio inclui um `.env.example` com os campos esperados.
 
-Variaveis utilizadas:
+Para subir tudo com Docker, na pratica o que voce precisa preencher e:
 
-- `DB_TYPE`: tipo do banco, hoje `postgres`.
-- `DB_HOST`: host do Postgres.
-- `DB_PORT`: porta do Postgres.
-- `DB_USERNAME`: usuario do banco.
-- `DB_PASSWORD`: senha do banco.
-- `DB_NAME`: nome do banco.
-- `REDIS_HOST`: host do Redis.
-- `REDIS_PORT`: porta do Redis.
 - `EXCHANGE_RATE_API_KEY`: chave da API de cambio.
 
-### Opcao 1: tudo com Docker Compose
+No `docker compose`, as portas ficam fixas assim:
+
+- API em `3000`
+- Postgres em `5433`
+- Redis em `6380`
+- Prometheus em `9090`
+- Grafana em `3001`
+
+## Como rodar
 
 1. Copie o arquivo de exemplo:
 
@@ -87,54 +87,32 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Se voce estiver rodando o backend localmente na porta `3000`, suba apenas a infraestrutura e a observabilidade:
+
+```bash
+docker compose up -d postgres redis prometheus grafana
+```
+
 4. A API ficara disponivel em:
 
 ```text
 http://localhost:3000
 ```
 
-Observacao: quando a aplicacao roda dentro do `docker compose`, o host do banco e do Redis e ajustado pelo proprio compose. Nesse modo, o Redis usa porta interna `6379`.
-
-### Opcao 2: aplicacao local e infraestrutura no Docker
-
-1. Copie o arquivo de exemplo:
-
-```bash
-cp .env.example .env
-```
-
-2. Preencha `EXCHANGE_RATE_API_KEY`.
-
-3. Se for rodar a aplicacao localmente e usar apenas Postgres/Redis do compose, ajuste no `.env`:
-
-```env
-REDIS_PORT=6380
-```
-
-Isso e necessario porque, nesse modo, o Redis do compose fica exposto na maquina host em `6380:6379`.
-
-4. Suba apenas a infraestrutura:
-
-```bash
-docker compose up -d postgres redis
-```
-
-5. Instale as dependencias:
-
-```bash
-npm install
-```
-
-6. Rode a aplicacao:
-
-```bash
-npm run start:dev
-```
-
-7. A API ficara disponivel em:
+5. Observabilidade:
 
 ```text
-http://localhost:3000
+Prometheus: http://localhost:9090
+Grafana: http://localhost:3001
+```
+
+Nesse modo, o Prometheus tambem tenta raspar o backend local em `localhost:3000`.
+
+Login padrao do Grafana neste compose:
+
+```text
+usuario: admin
+senha: admin
 ```
 
 ## Scripts uteis
@@ -194,7 +172,11 @@ Status atualmente usados no fluxo:
 
 ### Metricas da fila
 
-`GET /queue/metrics`
+`GET /queue/metrics` --> foi pedido como requisito no teste tecnico, por isso eu fiz. Mas adicionei à aplicação o prometheus, para análise técnica mais detalhada.
+
+### Metricas Prometheus
+
+`GET /metrics`
 
 ### Reenfileirar DLQ
 
@@ -210,6 +192,7 @@ Os testes implementados cobrem o nucleo do fluxo:
 - `WebhookController`
 - `TypeOrmOrderRepository`
 - `OrderProcessor`
+- `ExchangeRateService`
 - validacoes HTTP em e2e para payload e status invalidos
 
 Comandos:
@@ -229,6 +212,64 @@ O workflow em `.github/workflows/ci.yml` executa:
 - testes unitarios/integracao (`npm run test`)
 - testes e2e (`npm run test:e2e`)
 - build da imagem Docker para validar o `Dockerfile`
+
+## Observabilidade
+
+O projeto expoe metricas em formato Prometheus no endpoint `GET /metrics`.
+
+Ao subir o `docker compose`, os componentes abaixo ficam disponiveis:
+
+- Prometheus em `http://localhost:9090`
+- Grafana em `http://localhost:3001`
+
+O Grafana ja sobe com o Prometheus provisionado como datasource padrao.
+
+Consulta inicial recomendada no Grafana para ver volume de requests por rota nos ultimos 5 minutos:
+
+```promql
+sum by (route, method, status_code) (
+	increase(http_requests_total{job="order-orchestrator-app-local"}[5m])
+)
+```
+
+Outras queries uteis:
+
+Latencia p95 por rota:
+
+```promql
+histogram_quantile(
+	0.95,
+	sum by (le, route, method) (
+		rate(http_request_duration_seconds_bucket{job="order-orchestrator-app-local"}[5m])
+	)
+)
+```
+
+Jobs processados pela fila por resultado:
+
+```promql
+sum by (outcome) (
+	increase(queue_jobs_processed_total{job="order-orchestrator-app-local"}[5m])
+)
+```
+
+Chamadas externas por servico e resultado:
+
+```promql
+sum by (service, outcome) (
+	increase(external_api_request_duration_seconds_count{job="order-orchestrator-app-local"}[5m])
+)
+```
+
+Memoria residente do processo Node:
+
+```promql
+process_resident_memory_bytes{job="order-orchestrator-app-local"}
+```
+
+Se o backend estiver rodando em container pelo proprio `docker compose`, troque o job para `order-orchestrator-app-docker`.
+
+Proximo passo natural de evolucao: adicionar testes de carga com k6 e integrar as metricas do proprio teste ao Grafana, para correlacionar o comportamento do sistema sob carga com as metricas da aplicacao, fila e integracao externa.
 
 ## Limitacoes conhecidas
 

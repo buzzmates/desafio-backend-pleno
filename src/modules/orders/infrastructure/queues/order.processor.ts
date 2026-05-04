@@ -8,6 +8,7 @@ import { Logger } from '@nestjs/common';
 import { EnrichmentService } from '../../application/enrichment.service';
 import { Job, Queue } from 'bullmq';
 import { EnqueueOrderPayload } from '../../domain/types/queue.type';
+import { MetricsService } from '../../../../observability/metrics.service';
 
 @Processor('orders')
 export class OrderProcessor extends WorkerHost {
@@ -15,6 +16,7 @@ export class OrderProcessor extends WorkerHost {
   constructor(
     private readonly enrichmentService: EnrichmentService,
     @InjectQueue('orders-dlq') private readonly dlqQueue: Queue,
+    private readonly metricsService: MetricsService,
   ) {
     super();
   }
@@ -28,6 +30,11 @@ export class OrderProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   async onFailed(job: Job<EnqueueOrderPayload>, error: Error) {
+    this.metricsService.incrementQueueJob({
+      queue: 'orders',
+      outcome: 'failed',
+    });
+
     const isLastAttempt = job.attemptsMade >= (job.opts.attempts ?? 1);
 
     if (isLastAttempt) {
@@ -40,11 +47,19 @@ export class OrderProcessor extends WorkerHost {
         reason: error.message,
         failedAt: new Date().toISOString(),
       });
+      this.metricsService.incrementQueueJob({
+        queue: 'orders-dlq',
+        outcome: 'dlq',
+      });
     }
   }
 
   @OnWorkerEvent('completed')
   onCompleted(job: Job<EnqueueOrderPayload>) {
+    this.metricsService.incrementQueueJob({
+      queue: 'orders',
+      outcome: 'completed',
+    });
     this.logger.log(`Order ${job.data.order_id} processed successfully`);
   }
 }
