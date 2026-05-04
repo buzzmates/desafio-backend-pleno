@@ -269,7 +269,17 @@ process_resident_memory_bytes{job="order-orchestrator-app-local"}
 
 Se o backend estiver rodando em container pelo proprio `docker compose`, troque o job para `order-orchestrator-app-docker`.
 
-Proximo passo natural de evolucao: adicionar testes de carga com k6 e integrar as metricas do proprio teste ao Grafana, para correlacionar o comportamento do sistema sob carga com as metricas da aplicacao, fila e integracao externa.
+## Teste de carga com k6
+
+O projeto inclui um script de carga em `k6/load-test.js` para exercitar o endpoint `POST /webhooks/orders` com payloads unicos.
+
+Com o backend rodando localmente em `3000`, execute:
+
+```bash
+BASE_URL=http://localhost:3000 k6 run k6/load-test.js
+```
+
+Depois de iniciar o teste, aguarde o scrape do Prometheus e atualize o Grafana para observar a evolucao de throughput, latencia HTTP, jobs processados e chamadas externas sob carga.
 
 ## Limitacoes conhecidas
 
