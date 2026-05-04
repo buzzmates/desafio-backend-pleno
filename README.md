@@ -269,6 +269,8 @@ process_resident_memory_bytes{job="order-orchestrator-app-local"}
 
 Se o backend estiver rodando em container pelo proprio `docker compose`, troque o job para `order-orchestrator-app-docker`.
 
+Proximo passo natural de evolucao: adicionar testes de carga com k6 e integrar as metricas do proprio teste ao Grafana, para correlacionar o comportamento do sistema sob carga com as metricas da aplicacao, fila e integracao externa.
+
 ## Limitacoes conhecidas
 
 ### Idempotencia e consistencia entre banco e fila
