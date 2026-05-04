@@ -3,6 +3,7 @@ import { Job, Queue } from 'bullmq';
 import { EnrichmentService } from '../../application/enrichment.service';
 import { EnqueueOrderPayload } from '../../domain/types/queue.type';
 import { OrderProcessor } from './order.processor';
+import { MetricsService } from '../../../../observability/metrics.service';
 
 describe('OrderProcessor', () => {
   let processor: OrderProcessor;
@@ -10,6 +11,7 @@ describe('OrderProcessor', () => {
     Pick<EnrichmentService, 'enrich' | 'markAsFailed'>
   >;
   let dlqQueue: jest.Mocked<Pick<Queue, 'add'>>;
+  let metricsService: jest.Mocked<Pick<MetricsService, 'incrementQueueJob'>>;
 
   const makeJob = (
     overrides: Partial<Job<EnqueueOrderPayload>> = {},
@@ -33,9 +35,14 @@ describe('OrderProcessor', () => {
       add: jest.fn(),
     } as unknown as jest.Mocked<Pick<Queue, 'add'>>;
 
+    metricsService = {
+      incrementQueueJob: jest.fn(),
+    } as unknown as jest.Mocked<Pick<MetricsService, 'incrementQueueJob'>>;
+
     processor = new OrderProcessor(
       enrichmentService as unknown as EnrichmentService,
       dlqQueue as unknown as Queue,
+      metricsService as unknown as MetricsService,
     );
   });
 
@@ -61,6 +68,10 @@ describe('OrderProcessor', () => {
       processor.onFailed(job, new Error('temporary failure')),
     ).resolves.toBeUndefined();
 
+    expect(metricsService.incrementQueueJob).toHaveBeenCalledWith({
+      queue: 'orders',
+      outcome: 'failed',
+    });
     expect(enrichmentService.markAsFailed).not.toHaveBeenCalled();
     expect(dlqQueue.add).not.toHaveBeenCalled();
   });
@@ -76,6 +87,10 @@ describe('OrderProcessor', () => {
       processor.onFailed(job, new Error('exchange API down')),
     ).resolves.toBeUndefined();
 
+    expect(metricsService.incrementQueueJob).toHaveBeenNthCalledWith(1, {
+      queue: 'orders',
+      outcome: 'failed',
+    });
     expect(enrichmentService.markAsFailed).toHaveBeenCalledWith('order-1');
     expect(dlqQueue.add).toHaveBeenCalledWith(
       'dead-order',
@@ -85,5 +100,22 @@ describe('OrderProcessor', () => {
         failedAt: expect.any(String),
       }),
     );
+    expect(metricsService.incrementQueueJob).toHaveBeenNthCalledWith(2, {
+      queue: 'orders-dlq',
+      outcome: 'dlq',
+    });
+  });
+
+  it('increments the completed metric when the job finishes successfully', () => {
+    const job = makeJob({
+      data: { order_id: 'order-1' },
+    });
+
+    processor.onCompleted(job);
+
+    expect(metricsService.incrementQueueJob).toHaveBeenCalledWith({
+      queue: 'orders',
+      outcome: 'completed',
+    });
   });
 });
