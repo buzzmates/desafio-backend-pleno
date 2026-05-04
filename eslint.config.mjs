@@ -19,8 +19,22 @@ export default tseslint.config(
       },
       sourceType: 'commonjs',
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['k6/*.js'],
+        },
         tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    files: ['k6/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        __ENV: 'readonly',
+      },
+      parserOptions: {
+        projectService: false,
       },
     },
   },
