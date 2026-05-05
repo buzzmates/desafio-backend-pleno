@@ -115,6 +115,7 @@ usuario: admin
 senha: admin
 ```
 
+
 ## Scripts uteis
 
 ```bash
@@ -252,6 +253,13 @@ sum by (outcome) (
 	increase(queue_jobs_processed_total{job="order-orchestrator-app-local"}[5m])
 )
 ```
+
+Dashboard de processamento de jobs no Grafana:
+
+![Painel de Jobs Processados](./docs/images/grafana-queue-panel.png)
+
+
+
 
 Chamadas externas por servico e resultado:
 
