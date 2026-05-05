@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 
@@ -16,9 +16,7 @@ export class QueueService {
 
   constructor(
     @InjectQueue('order-processing') private readonly orderQueue: Queue,
-    @InjectQueue('currency-conversion') private readonly currencyQueue: Queue,
-    @InjectQueue('address-validation') private readonly addressQueue: Queue,
-    @InjectQueue('product-verification') private readonly productQueue: Queue,
+    @InjectQueue('notifications') private readonly notificationQueue: Queue,
   ) {}
 
   async enqueueOrder(orderId: string): Promise<void> {
@@ -58,34 +56,26 @@ export class QueueService {
 
   async getAllQueueMetrics(): Promise<{
     orderProcessing: QueueMetrics;
-    currencyConversion: QueueMetrics;
-    addressValidation: QueueMetrics;
-    productVerification: QueueMetrics;
+    notifications: QueueMetrics;
     aggregated: QueueMetrics;
   }> {
     const [
       orderMetrics,
-      currencyMetrics,
-      addressMetrics,
-      productMetrics,
+      notificationMetrics,
     ] = await Promise.all([
       this.getQueueMetrics(this.orderQueue),
-      this.getQueueMetrics(this.currencyQueue),
-      this.getQueueMetrics(this.addressQueue),
-      this.getQueueMetrics(this.productQueue),
+      this.getQueueMetrics(this.notificationQueue),
     ]);
 
     return {
       orderProcessing: orderMetrics,
-      currencyConversion: currencyMetrics,
-      addressValidation: addressMetrics,
-      productVerification: productMetrics,
+      notifications: notificationMetrics,
       aggregated: {
-        waiting: orderMetrics.waiting + currencyMetrics.waiting + addressMetrics.waiting + productMetrics.waiting,
-        active: orderMetrics.active + currencyMetrics.active + addressMetrics.active + productMetrics.active,
-        completed: orderMetrics.completed + currencyMetrics.completed + addressMetrics.completed + productMetrics.completed,
-        failed: orderMetrics.failed + currencyMetrics.failed + addressMetrics.failed + productMetrics.failed,
-        delayed: orderMetrics.delayed + currencyMetrics.delayed + addressMetrics.delayed + productMetrics.delayed,
+        waiting: orderMetrics.waiting + notificationMetrics.waiting,
+        active: orderMetrics.active + notificationMetrics.active,
+        completed: orderMetrics.completed + notificationMetrics.completed,
+        failed: orderMetrics.failed + notificationMetrics.failed,
+        delayed: orderMetrics.delayed + notificationMetrics.delayed,
       },
     };
   }
@@ -108,36 +98,75 @@ export class QueueService {
     };
   }
 
-  async enqueueCurrencyConversion(orderId: string): Promise<void> {
-    await this.currencyQueue.add('convert-currency', { orderId }, {
-      attempts: 5,
+  
+  async enqueueNotification(orderId: string, type: 'order_received' | 'order_enriched' | 'order_failed'): Promise<void> {
+    await this.notificationQueue.add('send-notification', { orderId, type }, {
+      attempts: 3,
       backoff: {
         type: 'exponential',
-        delay: 1000,
+        delay: 2000,
       },
     });
-    this.logger.log(`Order ${orderId} enqueued for currency conversion`);
+    this.logger.log(`Order ${orderId} enqueued for ${type} notification`);
   }
 
-  async enqueueAddressValidation(orderId: string): Promise<void> {
-    await this.addressQueue.add('validate-address', { orderId }, {
-      attempts: 5,
-      backoff: {
-        type: 'exponential',
-        delay: 1000,
-      },
-    });
-    this.logger.log(`Order ${orderId} enqueued for address validation`);
+  async clearQueue(queueName: string): Promise<void> {
+    const queue = this.getQueueByName(queueName);
+    await queue.clean(0, 0, 'completed');
+    await queue.clean(0, 0, 'failed');
+    await queue.clean(0, 0, 'waiting');
+    await queue.clean(0, 0, 'active');
+    this.logger.log(`Queue ${queueName} cleared`);
   }
 
-  async enqueueProductVerification(orderId: string): Promise<void> {
-    await this.productQueue.add('verify-products', { orderId }, {
-      attempts: 5,
-      backoff: {
-        type: 'exponential',
-        delay: 1000,
+  async getQueueJobs(queueName: string, query: any): Promise<any> {
+    const queue = this.getQueueByName(queueName);
+    const { state = 'waiting', page = 1, limit = 20 } = query;
+    const offset = (page - 1) * limit;
+
+    const jobs = await queue.getJobs(
+      state as any,
+      offset,
+      limit
+    );
+
+    const total = await queue.getJobCounts();
+
+    return {
+      jobs: jobs.map(job => ({
+        id: job.id,
+        name: job.name,
+        data: job.data,
+        opts: job.opts,
+        progress: typeof job.progress === 'number' ? job.progress : 0,
+        processedOn: job.processedOn,
+        finishedOn: job.finishedOn,
+        failedReason: job.failedReason,
+        returnvalue: job.returnvalue,
+      })),
+      pagination: {
+        page,
+        limit,
+        total: total[state] || 0,
       },
-    });
-    this.logger.log(`Order ${orderId} enqueued for product verification`);
+    };
+  }
+
+  private getQueueByName(queueName: string): Queue {
+    const queues = {
+      'order-processing': this.orderQueue,
+      'notifications': this.notificationQueue,
+    };
+
+    const queue = queues[queueName as keyof typeof queues];
+    if (!queue) {
+      throw new BadRequestException(`Queue ${queueName} not found`);
+    }
+
+    return queue;
+  }
+
+  async healthCheck(): Promise<void> {
+        await this.orderQueue.getJobCounts();
   }
 }
