@@ -21,7 +21,7 @@ export abstract class BaseEnrichmentProcessor<T extends EnrichmentJob> {
 
   /**
    * Main processing logic to be implemented by subclasses.
-   * Should perform the enrichment and return the result to be saved.
+   * Should perform enrichment and return result to be saved.
    */
   abstract enrich(job: Job<T>): Promise<Record<string, unknown>>;
 
@@ -40,20 +40,14 @@ export abstract class BaseEnrichmentProcessor<T extends EnrichmentJob> {
     this.logger.log(`Processing ${fieldName} for order: ${orderId}`);
 
     try {
-      // Perform enrichment
       const result = await this.enrich(job);
 
-      // Save result to OrderEnrichment
-      await this.prisma.orderEnrichment.update({
-        where: { orderId },
-        data: {
-          [fieldName]: result,
-        },
+      await this.orderRepository.updateEnrichmentData(orderId, {
+        [fieldName]: result,
       });
 
       this.logger.log(`${fieldName} completed for order: ${orderId}`);
 
-      // Check if all enrichments are complete
       await this.checkAndFinalizeEnrichment(orderId);
     } catch (error) {
       this.logger.error(
@@ -92,10 +86,68 @@ export abstract class BaseEnrichmentProcessor<T extends EnrichmentJob> {
   /**
    * Handler for job failure event.
    */
-  onFailed(job: Job<T>, error: Error): void {
+  async onFailed(job: Job<T>, error: Error): Promise<void> {
+    const { orderId } = job.data;
+    const fieldName = this.getEnrichmentField();
+
     this.logger.error(
-      `Job ${job.id} failed for order ${job.data.orderId}:`,
+      `Job ${job.id} failed for order ${orderId}:`,
       error.message,
     );
+
+    // Check if this is the final attempt (exhausted retries)
+    if (job.attemptsMade >= job.opts.attempts) {
+      this.logger.warn(
+        `All retries exhausted for ${fieldName} on order ${orderId}, marking as FAILED_ENRICHMENT`,
+      );
+      
+      await this.handleFailedEnrichment(orderId, fieldName, error);
+    }
+  }
+
+  /**
+   * Handle failed enrichment after all retries are exhausted.
+   */
+  private async handleFailedEnrichment(
+    orderId: string,
+    fieldName: string,
+    error: Error,
+  ): Promise<void> {
+    try {
+      // Update OrderEnrichment with error details
+      await this.prisma.orderEnrichment.update({
+        where: { orderId },
+        data: {
+          lastError: `${fieldName}: ${error.message}`,
+          retryCount: { increment: 1 },
+        },
+      });
+
+      // Check if all services have failed
+      const enrichment = await this.prisma.orderEnrichment.findUnique({
+        where: { orderId },
+      });
+
+      const allServicesFailed = 
+        !enrichment?.currencyConversion &&
+        !enrichment?.addressValidation &&
+        !enrichment?.productVerification &&
+        enrichment.retryCount >= 15; // 5 attempts per service * 3 services
+
+      if (allServicesFailed) {
+        await this.orderRepository.updateStatus(
+          orderId,
+          OrderStatus.FAILED_ENRICHMENT,
+        );
+        this.logger.error(
+          `Order ${orderId} marked as FAILED_ENRICHMENT after all services failed`,
+        );
+      }
+    } catch (handleError) {
+      this.logger.error(
+        `Failed to handle enrichment failure for order ${orderId}:`,
+        handleError instanceof Error ? handleError.message : String(handleError),
+      );
+    }
   }
 }
