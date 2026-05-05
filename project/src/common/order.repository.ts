@@ -88,4 +88,32 @@ export class OrderRepository {
       include: { items: true },
     }) as Promise<Order & { items: any[] }>;
   }
+
+  async updateEnrichmentData(orderId: string, enrichmentData: {
+    currencyConversion?: any;
+    addressValidation?: any;
+    productVerification?: any;
+  }): Promise<void> {
+    const existingEnrichment = await this.prisma.orderEnrichment.findUnique({
+      where: { orderId },
+    });
+
+    if (existingEnrichment) {
+      await this.prisma.orderEnrichment.update({
+        where: { orderId },
+        data: {
+          ...enrichmentData,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      await this.prisma.orderEnrichment.create({
+        data: {
+          orderId,
+          ...enrichmentData,
+          enrichmentStatus: 'COMPLETED',
+        },
+      });
+    }
+  }
 }

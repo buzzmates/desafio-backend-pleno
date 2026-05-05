@@ -20,9 +20,6 @@ import { EnrichmentModule } from './enrichment/enrichment.module';
     }),
     BullModule.registerQueue(
       { name: 'order-processing' },
-      { name: 'currency-conversion' },
-      { name: 'address-validation' },
-      { name: 'product-verification' },
     ),
     OrdersModule,
     WebhooksModule,
@@ -30,4 +27,4 @@ import { EnrichmentModule } from './enrichment/enrichment.module';
     EnrichmentModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
