@@ -1,0 +1,5 @@
+export enum OrderStatus {
+  RECEIVED = 'RECEIVED',
+  ENRICHED = 'ENRICHED',
+  FAILED_ENRICHMENT = 'FAILED_ENRICHMENT',
+}

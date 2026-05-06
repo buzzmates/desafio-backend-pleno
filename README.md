@@ -1,67 +1,307 @@
-# Desafio Backend Pleno — Orquestrador de Pedidos
+# Order Orchestrator
 
-Criar uma API que:
-1. Receba pedidos via **webhook**.
-2. **Valide** e **enfileire** para processamento assíncrono.
-3. **Enriqueça os dados** do pedido consultando um **serviço externo**.
-4. Utilize **filas** para processamento e **mecanismos de retry** em caso de falhas.
-5. Demonstre **boas práticas de código e arquitetura**.
-6. Utilizar **NestJS**.
+API em NestJS para recebimento de pedidos via webhook, persistencia em Postgres, processamento assincrono com BullMQ/Redis, enriquecimento via servico externo e administracao basica da fila.
 
----
+Este projeto foi desenvolvido como resposta ao desafio tecnico de orquestracao de pedidos. A implementacao prioriza clareza do fluxo principal, testes automatizados no core e uma separacao inicial de camadas inspirada em Clean Architecture.
 
-### Receber Pedido (Webhook)
+## O que foi implementado
+
+- `POST /webhooks/orders` para receber, validar, persistir e enfileirar pedidos.
+- Idempotencia baseada em `idempotency_key` com protecao por unicidade no banco e criacao controlada no repositorio.
+- Processamento assincrono com BullMQ.
+- Enriquecimento de pedido via API externa de cambio.
+- Retry com backoff exponencial na fila principal.
+- Envio para DLQ quando todas as tentativas falham.
+- `GET /orders` com filtro opcional por status.
+- `GET /orders/:id` com detalhes do pedido.
+- `GET /queue/metrics` para visibilidade basica da fila.
+- `POST /queue/retry-dlq` para reenfileirar jobs da DLQ manualmente.
+- Testes unitarios, de controller, de repositorio, de processor e e2e de validacao HTTP.
+- CI com lint, build, testes e validacao do Dockerfile via GitHub Actions.
+
+## Arquitetura
+
+O projeto busca separar responsabilidades em quatro camadas:
+
+- `domain`: entidades, enums, erros e contratos.
+- `application`: casos de uso e orquestracao de regras.
+- `infrastructure`: TypeORM, BullMQ, integracao externa e implementacoes concretas.
+- `presentation`: controllers HTTP e DTOs.
+
+Estrutura simplificada:
+
+```text
+src/modules/orders
+├── application
+├── domain
+├── infrastructure
+└── presentation
+```
+
+Busquei seguir principios de Clean Architecture, mas nao considero a implementacao como uma Clean Architecture pura. Pelo tempo disponivel do desafio, optei por uma abordagem pragmatica: a separacao de camadas existe, mas ainda ha acoplamentos que eu refinaria em uma evolucao futura.
+
+Exemplos de pontos que eu melhoraria:
+
+- mover parte do mapeamento de resposta HTTP para a camada de apresentacao;
+- transformar a administracao da fila em casos de uso dedicados na camada de application;
+- reduzir o conhecimento de detalhes de infraestrutura fora dos adapters concretos.
+
+## Como rodar
+
+### Pre-requisitos
+
+- Node.js 22
+- npm
+- Docker e Docker Compose
+- chave valida para a API de cambio utilizada no enriquecimento
+
+## Variaveis de ambiente
+
+Este repositorio inclui um `.env.example` com os campos esperados.
+
+Para subir tudo com Docker, na pratica o que voce precisa preencher e:
+
+- `EXCHANGE_RATE_API_KEY`: chave da API de cambio.
+
+No `docker compose`, as portas ficam fixas assim:
+
+- API em `3000`
+- Postgres em `5433`
+- Redis em `6380`
+- Prometheus em `9090`
+- Grafana em `3001`
+
+## Como rodar
+
+1. Copie o arquivo de exemplo:
+
+```bash
+cp .env.example .env
+```
+
+2. Preencha `EXCHANGE_RATE_API_KEY` no `.env`.
+
+3. Suba a stack:
+
+```bash
+docker compose up --build
+```
+
+Se voce estiver rodando o backend localmente na porta `3000`, suba apenas a infraestrutura e a observabilidade:
+
+```bash
+docker compose up -d postgres redis prometheus grafana
+```
+
+4. A API ficara disponivel em:
+
+```text
+http://localhost:3000
+```
+
+5. Observabilidade:
+
+```text
+Prometheus: http://localhost:9090
+Grafana: http://localhost:3001
+```
+
+Nesse modo, o Prometheus tambem tenta raspar o backend local em `localhost:3000`.
+
+Login padrao do Grafana neste compose:
+
+```text
+usuario: admin
+senha: admin
+```
+
+
+## Scripts uteis
+
+```bash
+npm run lint:check
+npm run build
+npm run test
+npm run test:e2e
+npm run start:dev
+```
+
+## Endpoints
+
+### Receber pedido
+
 `POST /webhooks/orders`
 
-**Exemplo de payload:**
+Exemplo de payload:
+
 ```json
 {
-  "order_id": "ext-123",
-  "customer": { "email": "user@example.com", "name": "Ana" },
-  "items": [{ "sku": "ABC123", "qty": 2, "unit_price": 59.9 }],
-  "currency": "USD",
-  "idempotency_key": "uuid-or-hash"
+	"order_id": "ext-123",
+	"customer": {
+		"email": "user@example.com",
+		"name": "Ana"
+	},
+	"items": [
+		{
+			"sku": "ABC123",
+			"qty": 2,
+			"unit_price": 59.9
+		}
+	],
+	"currency": "USD",
+	"idempotency_key": "uuid-or-hash"
 }
 ```
 
-**Requisitos:**
-- Validar o payload recebido.
-- Garantir **idempotência** (não processar o mesmo pedido duas vezes).
-- Enfileirar o pedido para processamento.
-- Persistir o pedido no banco (status inicial: `RECEIVED`).
+### Listar pedidos
 
----
+`GET /orders`
 
-### Enriquecimento
-- Consultar um **serviço externo** para complementar informações do pedido (por exemplo, converter o total para outra moeda ou validar dados de cliente).
-- Atualizar o pedido com as informações obtidas.
-- Em caso de erro:
-    - Retentar algumas vezes com backoff.
-    - Caso todas as tentativas falhem, enviar o job para uma **DLQ (Dead Letter Queue)**.
-    - Atualizar o status para `FAILED_ENRICHMENT`.
+Filtro opcional:
 
----
+`GET /orders?status=RECEIVED`
 
-### Consulta e Administração
-- `GET /orders` — listar pedidos, com filtro opcional por status.
-- `GET /orders/:id` — exibir os detalhes de um pedido.
-- `GET /queue/metrics` — exibir informações gerais da fila.
+Status atualmente usados no fluxo:
 
----
+- `RECEIVED`
+- `ENRICHED`
+- `FAILED_ENRICHMENT`
 
-### Sugestão de Integração Externa
-Você pode escolher **qualquer serviço externo público** para demonstrar o uso de integrações.  
-Algumas possibilidades incluem:
-- API de câmbio (ex.: para converter valores de moedas);
-- API de CEP (ex.: para validar endereços de clientes);
-- API de produtos (ex.: para validar SKUs);
-- API de tempo ou geolocalização (apenas para demonstrar integração).
----
+### Buscar pedido por id
 
-### Testes (opcionais)
-Os testes são opcionais, mas podem demonstrar melhor sua capacidade de estruturar o código e validar comportamentos.  
-É importante que o fluxo da **fila** esteja representado nos testes, validando o processamento assíncrono e as transições de status.
+`GET /orders/:id`
 
----
-### Entregáveis
-Repositório público (GitHub ou GitLab) com o código do desafio implementado.
+### Metricas da fila
+
+`GET /queue/metrics` --> foi pedido como requisito no teste tecnico, por isso eu fiz. Mas adicionei à aplicação o prometheus, para análise técnica mais detalhada.
+
+### Metricas Prometheus
+
+`GET /metrics`
+
+### Reenfileirar DLQ
+
+`POST /queue/retry-dlq`
+
+## Testes
+
+Os testes implementados cobrem o nucleo do fluxo:
+
+- `OrderService`
+- `EnrichmentService`
+- `OrdersController`
+- `WebhookController`
+- `TypeOrmOrderRepository`
+- `OrderProcessor`
+- `ExchangeRateService`
+- validacoes HTTP em e2e para payload e status invalidos
+
+Comandos:
+
+```bash
+npm run test
+npm run test:e2e
+```
+
+## CI
+
+O workflow em `.github/workflows/ci.yml` executa:
+
+- install (`npm ci`)
+- lint (`npm run lint:check`)
+- build (`npm run build`)
+- testes unitarios/integracao (`npm run test`)
+- testes e2e (`npm run test:e2e`)
+- build da imagem Docker para validar o `Dockerfile`
+
+## Observabilidade
+
+O projeto expoe metricas em formato Prometheus no endpoint `GET /metrics`.
+
+Ao subir o `docker compose`, os componentes abaixo ficam disponiveis:
+
+- Prometheus em `http://localhost:9090`
+- Grafana em `http://localhost:3001`
+
+O Grafana ja sobe com o Prometheus provisionado como datasource padrao.
+
+Consulta inicial recomendada no Grafana para ver volume de requests por rota nos ultimos 5 minutos:
+
+```promql
+sum by (route, method, status_code) (
+	increase(http_requests_total{job="order-orchestrator-app-local"}[5m])
+)
+```
+
+Outras queries uteis:
+
+Latencia p95 por rota:
+
+```promql
+histogram_quantile(
+	0.95,
+	sum by (le, route, method) (
+		rate(http_request_duration_seconds_bucket{job="order-orchestrator-app-local"}[5m])
+	)
+)
+```
+
+Jobs processados pela fila por resultado:
+
+```promql
+sum by (outcome) (
+	increase(queue_jobs_processed_total{job="order-orchestrator-app-local"}[5m])
+)
+```
+
+Dashboard de processamento de jobs no Grafana:
+
+![Painel de Jobs Processados](./docs/images/grafana-queue-panel.png)
+
+
+
+
+Chamadas externas por servico e resultado:
+
+```promql
+sum by (service, outcome) (
+	increase(external_api_request_duration_seconds_count{job="order-orchestrator-app-local"}[5m])
+)
+```
+
+Memoria residente do processo Node:
+
+```promql
+process_resident_memory_bytes{job="order-orchestrator-app-local"}
+```
+
+Se o backend estiver rodando em container pelo proprio `docker compose`, troque o job para `order-orchestrator-app-docker`.
+
+## Teste de carga com k6
+
+O projeto inclui um script de carga em `k6/load-test.js` para exercitar o endpoint `POST /webhooks/orders` com payloads unicos.
+
+Com o backend rodando localmente em `3000`, execute:
+
+```bash
+BASE_URL=http://localhost:3000 k6 run k6/load-test.js
+```
+
+Depois de iniciar o teste, aguarde o scrape do Prometheus e atualize o Grafana para observar a evolucao de throughput, latencia HTTP, jobs processados e chamadas externas sob carga.
+
+## Limitacoes conhecidas
+
+### Idempotencia e consistencia entre banco e fila
+
+Estou ciente de que a solucao atual de idempotencia resolve bem a duplicidade concorrente no nivel da persistencia, mas ainda existe uma janela importante entre persistir o pedido e publicar o job na fila.
+
+Hoje, se o pedido for salvo no banco e o `enqueue` falhar logo depois, o sistema pode ficar com um pedido persistido em `RECEIVED` sem job correspondente em processamento.
+
+Se eu fosse evoluir esse projeto, eu trataria esse ponto com Outbox Pattern:
+
+1. persistir o pedido e um evento de saida na mesma transacao;
+2. publicar o evento da outbox de forma assincrona e confiavel;
+3. marcar o evento como entregue depois do envio para a fila.
+
+Esse seria o caminho mais robusto para fechar a lacuna de consistencia entre banco e mensageria.
+
