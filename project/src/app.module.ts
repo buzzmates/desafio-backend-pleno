@@ -18,13 +18,11 @@ import { EnrichmentModule } from './enrichment/enrichment.module';
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
-    BullModule.registerQueue(
-      { name: 'order-processing' },
-    ),
+    BullModule.registerQueue({ name: 'order-processing' }),
     OrdersModule,
     WebhooksModule,
     QueueModule,
     EnrichmentModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}
