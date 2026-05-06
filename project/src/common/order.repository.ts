@@ -22,35 +22,43 @@ export interface PaginatedOrders {
 export class OrderRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: Prisma.OrderCreateInput & { items: Prisma.OrderItemCreateManyOrderInputEnvelope }): Promise<Order> {
+  async create(
+    data: Prisma.OrderCreateInput & {
+      items: Prisma.OrderItemCreateManyOrderInputEnvelope;
+    },
+  ): Promise<Order> {
     return this.prisma.order.create({
       data: {
         ...data,
         items: data.items,
       },
       include: { items: true },
-    }) as Promise<Order & { items: any[] }>;
+    });
   }
 
   async findById(id: string): Promise<(Order & { items: any[] }) | null> {
     return this.prisma.order.findUnique({
       where: { id },
       include: { items: true },
-    }) as Promise<(Order & { items: any[] }) | null>;
+    });
   }
 
-  async findByExternalId(externalOrderId: string): Promise<(Order & { items: any[] }) | null> {
+  async findByExternalId(
+    externalOrderId: string,
+  ): Promise<(Order & { items: any[] }) | null> {
     return this.prisma.order.findUnique({
       where: { externalOrderId },
       include: { items: true },
-    }) as Promise<(Order & { items: any[] }) | null>;
+    });
   }
 
-  async findByIdempotencyKey(idempotencyKey: string): Promise<(Order & { items: any[] }) | null> {
+  async findByIdempotencyKey(
+    idempotencyKey: string,
+  ): Promise<(Order & { items: any[] }) | null> {
     return this.prisma.order.findUnique({
       where: { idempotencyKey },
       include: { items: true },
-    }) as Promise<(Order & { items: any[] }) | null>;
+    });
   }
 
   async findAll(options: FindAllOptions = {}): Promise<PaginatedOrders> {
@@ -71,7 +79,7 @@ export class OrderRepository {
     ]);
 
     return {
-      data: orders as (Order & { items: any[] })[],
+      data: orders,
       meta: {
         page,
         limit,
@@ -86,14 +94,17 @@ export class OrderRepository {
       where: { id },
       data: { status, updatedAt: new Date() },
       include: { items: true },
-    }) as Promise<Order & { items: any[] }>;
+    });
   }
 
-  async updateEnrichmentData(orderId: string, enrichmentData: {
-    currencyConversion?: any;
-    addressValidation?: any;
-    productVerification?: any;
-  }): Promise<void> {
+  async updateEnrichmentData(
+    orderId: string,
+    enrichmentData: {
+      currencyConversion?: any;
+      addressValidation?: any;
+      productVerification?: any;
+    },
+  ): Promise<void> {
     const existingEnrichment = await this.prisma.orderEnrichment.findUnique({
       where: { orderId },
     });
