@@ -19,8 +19,9 @@ export class WebhooksService {
   ) {}
 
   async processOrder(dto: CreateOrderDto): Promise<ProcessOrderResult> {
-    // Idempotency check
-    const existingOrder = await this.orderRepository.findByIdempotencyKey(dto.idempotency_key);
+    const existingOrder = await this.orderRepository.findByIdempotencyKey(
+      dto.idempotency_key,
+    );
     if (existingOrder) {
       this.logger.log(`Duplicate order received: ${dto.idempotency_key}`);
       return {
@@ -29,10 +30,11 @@ export class WebhooksService {
       };
     }
 
-    // Calculate total
-    const totalAmount = dto.items.reduce((sum, item) => sum + item.qty * item.unit_price, 0);
+    const totalAmount = dto.items.reduce(
+      (sum, item) => sum + item.qty * item.unit_price,
+      0,
+    );
 
-    // Create order data
     const orderData: Prisma.OrderCreateInput = {
       id: crypto.randomUUID(),
       externalOrderId: dto.order_id,
@@ -55,7 +57,6 @@ export class WebhooksService {
       })),
     };
 
-    // Persist order
     const order = await this.orderRepository.create({
       ...orderData,
       items: itemsData,
@@ -63,7 +64,6 @@ export class WebhooksService {
 
     this.logger.log(`Order created: ${order.id}`);
 
-    // Enqueue for processing
     await this.queueService.enqueueOrder(order.id);
 
     return {

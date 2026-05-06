@@ -33,7 +33,12 @@ export class WebhookSignatureMiddleware implements NestMiddleware {
 
     const receivedSignature = signature.replace('sha256=', '');
 
-    if (!crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(receivedSignature))) {
+    if (
+      !crypto.timingSafeEqual(
+        Buffer.from(expectedSignature),
+        Buffer.from(receivedSignature),
+      )
+    ) {
       throw new ForbiddenException('Invalid webhook signature');
     }
 
