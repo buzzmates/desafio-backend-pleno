@@ -48,7 +48,7 @@ export abstract class BaseExternalService {
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'OrderProcessingOrchestrator/1.0',
-        'apikey': apiKey,
+        apikey: apiKey,
         ...config.headers,
       },
       timeout: 10000,
@@ -56,8 +56,9 @@ export abstract class BaseExternalService {
 
     try {
       this.logger.debug(`Making request to ${requestConfig.url}`);
-      const response: AxiosResponse<T> = await this.httpService.axiosRef.request(requestConfig);
-      
+      const response: AxiosResponse<T> =
+        await this.httpService.axiosRef.request(requestConfig);
+
       if (response.status >= 200 && response.status < 300) {
         return response.data;
       } else {
@@ -68,11 +69,13 @@ export abstract class BaseExternalService {
         `Request failed to ${requestConfig.url}:`,
         error instanceof Error ? error.message : String(error),
       );
-      
+
       if (error instanceof Error && 'response' in error) {
         const axiosError = error as any;
         if (axiosError.response?.status === 401) {
-          throw new Error(`Unauthorized: Invalid API key for ${this.getServiceName()}`);
+          throw new Error(
+            `Unauthorized: Invalid API key for ${this.getServiceName()}`,
+          );
         }
         if (axiosError.response?.status === 429) {
           throw new Error(`Rate limit exceeded for ${this.getServiceName()}`);
@@ -81,7 +84,7 @@ export abstract class BaseExternalService {
           throw new Error(`Service unavailable for ${this.getServiceName()}`);
         }
       }
-      
+
       throw error;
     }
   }
@@ -101,7 +104,7 @@ export abstract class BaseExternalService {
         return await fn();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
         this.logger.warn(
           `${this.getServiceName()} attempt ${attempt} failed:`,
           lastError.message,
@@ -110,7 +113,7 @@ export abstract class BaseExternalService {
         if (attempt < maxRetries) {
           const delay = baseDelay * Math.pow(2, attempt - 1);
           this.logger.debug(`Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
@@ -125,7 +128,10 @@ export abstract class BaseExternalService {
   /**
    * Validate API response structure
    */
-  protected validateResponse<T>(data: unknown, validator: (data: unknown) => data is T): T {
+  protected validateResponse<T>(
+    data: unknown,
+    validator: (data: unknown) => data is T,
+  ): T {
     if (!validator(data)) {
       throw new Error(`Invalid response format from ${this.getServiceName()}`);
     }

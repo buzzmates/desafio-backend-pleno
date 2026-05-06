@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { BaseExternalService } from '../base-external.service';
-import { 
-  AddressValidationRequest, 
-  AddressValidationResult, 
-  ViaCepApiResponse 
+import {
+  AddressValidationRequest,
+  AddressValidationResult,
+  ViaCepApiResponse,
 } from '../dto/address-validation.dto';
 
 @Injectable()
@@ -25,13 +25,15 @@ export class AddressValidationService extends BaseExternalService {
     return 'AddressValidation';
   }
 
-  async validateAddress(request: AddressValidationRequest): Promise<AddressValidationResult> {
+  async validateAddress(
+    request: AddressValidationRequest,
+  ): Promise<AddressValidationResult> {
     const { postalCode } = request;
     this.logger.log(`Validando endereço para CEP: ${postalCode}`);
 
     try {
       const response = await this.httpService.axiosRef.get(
-        `https://viacep.com.br/ws/${postalCode}/json/`
+        `https://viacep.com.br/ws/${postalCode}/json/`,
       );
 
       const data = response.data;
@@ -60,7 +62,7 @@ export class AddressValidationService extends BaseExternalService {
       return result;
     } catch (error) {
       this.logger.error(`Validação de endereço falhou:`, error.message);
-      
+
       const result: AddressValidationResult = {
         isValid: false,
         postalCode,

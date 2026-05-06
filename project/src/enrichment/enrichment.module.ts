@@ -28,15 +28,15 @@ import { ProductProcessor } from './processors/product.processor';
     // Common services
     OrderRepository,
     PrismaService,
-    
+
     // External services
     CurrencyConversionService,
     AddressValidationService,
     ProductVerificationService,
-    
+
     // Queue services
     EnrichmentQueueService,
-    
+
     // Queue processors
     CurrencyProcessor,
     AddressProcessor,

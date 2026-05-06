@@ -1,6 +1,9 @@
 import { Processor, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { BaseEnrichmentProcessor, EnrichmentJob } from '../base-enrichment.processor';
+import {
+  BaseEnrichmentProcessor,
+  EnrichmentJob,
+} from '../base-enrichment.processor';
 import { OrderRepository } from '../../common/order.repository';
 import { PrismaService } from '../../common/prisma.service';
 import { CurrencyConversionService } from '../services/currency-conversion.service';
@@ -44,10 +47,11 @@ export class CurrencyProcessor extends BaseEnrichmentProcessor<CurrencyJob> {
       to: 'USD',
     };
 
-    const conversionResult = await this.currencyService.convertCurrency(conversionRequest);
+    const conversionResult =
+      await this.currencyService.convertCurrency(conversionRequest);
 
     this.logger.log(
-      `Currency conversion successful: ${conversionRequest.amount} ${conversionRequest.from} → ${conversionResult.convertedAmount} USD`
+      `Currency conversion successful: ${conversionRequest.amount} ${conversionRequest.from} → ${conversionResult.convertedAmount} USD`,
     );
 
     return conversionResult as unknown as Record<string, unknown>;

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { BaseExternalService } from '../base-external.service';
-import { 
-  CurrencyConversionRequest, 
-  CurrencyConversionResult, 
-  CurrencyApiResponse 
+import {
+  CurrencyConversionRequest,
+  CurrencyConversionResult,
+  CurrencyApiResponse,
 } from '../dto/currency-conversion.dto';
 
 @Injectable()
@@ -25,8 +25,12 @@ export class CurrencyConversionService extends BaseExternalService {
     return 'CurrencyConversion';
   }
 
-  async convertCurrency(request: CurrencyConversionRequest): Promise<CurrencyConversionResult> {
-    this.logger.log(`Converting ${request.amount} ${request.from} to ${request.to}`);
+  async convertCurrency(
+    request: CurrencyConversionRequest,
+  ): Promise<CurrencyConversionResult> {
+    this.logger.log(
+      `Converting ${request.amount} ${request.from} to ${request.to}`,
+    );
 
     const result = await this.retryWithBackoff(async () => {
       const response = await this.makeRequest<CurrencyApiResponse>({
@@ -54,7 +58,7 @@ export class CurrencyConversionService extends BaseExternalService {
     };
 
     this.logger.log(
-      `Conversion successful: ${request.amount} ${request.from} = ${convertedAmount} ${request.to}`
+      `Conversion successful: ${request.amount} ${request.from} = ${convertedAmount} ${request.to}`,
     );
 
     return conversionResult;
@@ -78,7 +82,9 @@ export class CurrencyConversionService extends BaseExternalService {
    * Get supported currencies
    */
   async getSupportedCurrencies(): Promise<string[]> {
-    const response = await this.makeRequest<{ symbols: Record<string, string> }>({
+    const response = await this.makeRequest<{
+      symbols: Record<string, string>;
+    }>({
       method: 'GET',
       url: 'symbols',
     });
@@ -89,7 +95,10 @@ export class CurrencyConversionService extends BaseExternalService {
   /**
    * Get historical rates for a date
    */
-  async getHistoricalRates(date: string, base: string): Promise<CurrencyApiResponse> {
+  async getHistoricalRates(
+    date: string,
+    base: string,
+  ): Promise<CurrencyApiResponse> {
     this.logger.log(`Fetching historical rates for ${date} with base ${base}`);
 
     const response = await this.makeRequest<CurrencyApiResponse>({

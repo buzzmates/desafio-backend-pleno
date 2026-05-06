@@ -1,6 +1,9 @@
 import { Processor, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { BaseEnrichmentProcessor, EnrichmentJob } from '../base-enrichment.processor';
+import {
+  BaseEnrichmentProcessor,
+  EnrichmentJob,
+} from '../base-enrichment.processor';
 import { OrderRepository } from '../../common/order.repository';
 import { PrismaService } from '../../common/prisma.service';
 import { AddressValidationService } from '../services/address-validation.service';
@@ -38,14 +41,15 @@ export class AddressProcessor extends BaseEnrichmentProcessor<AddressJob> {
 
     // For demo purposes, using a fixed postal code
     // In real implementation, this would come from order customer data
-    const postalCode = '01310-100'; // Example São Paulo postal code
-    
-    this.logger.log(`Using postal code ${postalCode} for order ${orderId}`);
+    const postalCode = '01310100'; // Example São Paulo postal code (8 digits)
 
-    const validationResult = await this.addressService.validateAddress({ postalCode });
+    this.logger.log(`Using postal code ${postalCode} for order ${orderId}`);
+    const validationResult = await this.addressService.validateAddress({
+      postalCode,
+    });
 
     this.logger.log(
-      `Address validation ${validationResult.isValid ? 'successful' : 'failed'} for order: ${orderId}`
+      `Address validation ${validationResult?.isValid ? 'successful' : 'failed'} for order: ${orderId}`,
     );
 
     return validationResult as unknown as Record<string, unknown>;

@@ -13,35 +13,47 @@ export class EnrichmentQueueService {
   ) {}
 
   async enqueueCurrencyConversion(orderId: string): Promise<void> {
-    await this.currencyQueue.add('convert-currency', { orderId }, {
-      attempts: 5,
-      backoff: {
-        type: 'exponential',
-        delay: 1000,
+    await this.currencyQueue.add(
+      'convert-currency',
+      { orderId },
+      {
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
       },
-    });
+    );
     this.logger.log(`Order ${orderId} enqueued for currency conversion`);
   }
 
   async enqueueAddressValidation(orderId: string): Promise<void> {
-    await this.addressQueue.add('validate-address', { orderId }, {
-      attempts: 5,
-      backoff: {
-        type: 'exponential',
-        delay: 1000,
+    await this.addressQueue.add(
+      'validate-address',
+      { orderId },
+      {
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
       },
-    });
+    );
     this.logger.log(`Order ${orderId} enqueued for address validation`);
   }
 
   async enqueueProductVerification(orderId: string): Promise<void> {
-    await this.productQueue.add('verify-product', { orderId }, {
-      attempts: 5,
-      backoff: {
-        type: 'exponential',
-        delay: 1000,
+    await this.productQueue.add(
+      'verify-product',
+      { orderId },
+      {
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
       },
-    });
+    );
     this.logger.log(`Order ${orderId} enqueued for product verification`);
   }
 }

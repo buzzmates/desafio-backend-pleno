@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { BaseExternalService } from '../base-external.service';
-import { 
-  ProductVerificationRequest, 
-  ProductVerificationResult, 
-  ProductData 
+import {
+  ProductVerificationRequest,
+  ProductVerificationResult,
+  ProductData,
 } from '../dto/product-verification.dto';
 
 @Injectable()
@@ -25,14 +25,26 @@ export class ProductVerificationService extends BaseExternalService {
     return 'ProductVerification';
   }
 
-  async verifyProduct(request: ProductVerificationRequest): Promise<ProductVerificationResult> {
+  async verifyProduct(
+    request: ProductVerificationRequest,
+  ): Promise<ProductVerificationResult> {
     const { sku } = request;
     this.logger.log(`Verificando produto SKU: ${sku}`);
 
     try {
       const mockProductData: Record<string, any> = {
-        'ABC123': { name: 'Produto Amostra', price: 59.90, stock: 100, isActive: true },
-        'XYZ789': { name: 'Outro Produto', price: 29.90, stock: 50, isActive: true },
+        ABC123: {
+          name: 'Produto Amostra',
+          price: 59.9,
+          stock: 100,
+          isActive: true,
+        },
+        XYZ789: {
+          name: 'Outro Produto',
+          price: 29.9,
+          stock: 50,
+          isActive: true,
+        },
       };
 
       const product = mockProductData[sku];
@@ -58,7 +70,7 @@ export class ProductVerificationService extends BaseExternalService {
       return result;
     } catch (error) {
       this.logger.error(`Verificação de produto falhou:`, error.message);
-      
+
       const result: ProductVerificationResult = {
         sku,
         isValid: false,

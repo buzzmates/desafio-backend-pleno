@@ -1,6 +1,9 @@
 import { Processor, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { BaseEnrichmentProcessor, EnrichmentJob } from '../base-enrichment.processor';
+import {
+  BaseEnrichmentProcessor,
+  EnrichmentJob,
+} from '../base-enrichment.processor';
 import { OrderRepository } from '../../common/order.repository';
 import { PrismaService } from '../../common/prisma.service';
 import { ProductVerificationService } from '../services/product-verification.service';
@@ -43,18 +46,33 @@ export class ProductProcessor extends BaseEnrichmentProcessor<ProductJob> {
       throw new Error(`No items found for order ${orderId}`);
     }
 
-    // For demo purposes, verify the first SKU
-    // In real implementation, could verify all items or specific ones
-    const firstItem = order.items[0];
-    const sku = firstItem.sku;
+    // Verify all items in the order
+    const verificationResults = [];
+    for (const item of order.items) {
+      const verificationResult = await this.productService.verifyProduct({
+        sku: item.sku,
+      });
+      verificationResults.push(verificationResult);
+    }
 
-    const verificationResult = await this.productService.verifyProduct({ sku: order.items[0].sku });
+    // Calculate statistics
+    const totalItems = verificationResults.length;
+    const verifiedItems = verificationResults.filter(
+      (result) => result.isValid,
+    ).length;
+    const failedItems = totalItems - verifiedItems;
 
     this.logger.log(
-      `Product verification ${verificationResult.isValid ? 'successful' : 'failed'} for SKU ${sku} in order: ${orderId}`
+      `Product verification completed: ${verifiedItems}/${totalItems} items verified for order: ${orderId}`,
     );
 
-    return verificationResult as unknown as Record<string, unknown>;
+    return {
+      verificationResults,
+      totalItems,
+      verifiedItems,
+      failedItems,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @OnWorkerEvent('completed')

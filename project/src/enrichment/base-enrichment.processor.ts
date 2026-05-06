@@ -100,7 +100,7 @@ export abstract class BaseEnrichmentProcessor<T extends EnrichmentJob> {
       this.logger.warn(
         `All retries exhausted for ${fieldName} on order ${orderId}, marking as FAILED_ENRICHMENT`,
       );
-      
+
       await this.handleFailedEnrichment(orderId, fieldName, error);
     }
   }
@@ -128,7 +128,7 @@ export abstract class BaseEnrichmentProcessor<T extends EnrichmentJob> {
         where: { orderId },
       });
 
-      const allServicesFailed = 
+      const allServicesFailed =
         !enrichment?.currencyConversion &&
         !enrichment?.addressValidation &&
         !enrichment?.productVerification &&
@@ -146,7 +146,9 @@ export abstract class BaseEnrichmentProcessor<T extends EnrichmentJob> {
     } catch (handleError) {
       this.logger.error(
         `Failed to handle enrichment failure for order ${orderId}:`,
-        handleError instanceof Error ? handleError.message : String(handleError),
+        handleError instanceof Error
+          ? handleError.message
+          : String(handleError),
       );
     }
   }
