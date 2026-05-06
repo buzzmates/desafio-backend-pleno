@@ -26,7 +26,7 @@ export class NotificationProcessor {
       }
 
       let notificationData;
-      
+
       switch (type) {
         case 'order_received':
           notificationData = {
@@ -36,7 +36,7 @@ export class NotificationProcessor {
             template: 'order_received',
           };
           break;
-        
+
         case 'order_enriched':
           notificationData = {
             to: order.customerEmail,
@@ -45,7 +45,7 @@ export class NotificationProcessor {
             template: 'order_enriched',
           };
           break;
-        
+
         case 'order_failed':
           notificationData = {
             to: order.customerEmail,
@@ -60,21 +60,29 @@ export class NotificationProcessor {
 
       this.logger.log(`Notification sent for order ${orderId}, type: ${type}`);
     } catch (error) {
-      this.logger.error(`Failed to send notification for order ${orderId}:`, error.message);
+      this.logger.error(
+        `Failed to send notification for order ${orderId}:`,
+        error.message,
+      );
       throw error;
     }
   }
 
   private async sendNotification(notificationData: any): Promise<void> {
-    this.logger.log(`Sending notification:`, JSON.stringify(notificationData, null, 2));
-    
-    await new Promise(resolve => setTimeout(resolve, 100));
-    await new Promise(resolve => setTimeout(resolve, 100));
+    this.logger.log(
+      `Sending notification:`,
+      JSON.stringify(notificationData, null, 2),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   @OnWorkerEvent('completed')
   onCompleted(job: Job<SendNotificationJob>) {
-    this.logger.log(`Notification job ${job.id} completed for order ${job.data.orderId}, type: ${job.data.type}`);
+    this.logger.log(
+      `Notification job ${job.id} completed for order ${job.data.orderId}, type: ${job.data.type}`,
+    );
   }
 
   @OnWorkerEvent('failed')

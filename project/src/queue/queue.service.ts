@@ -20,13 +20,17 @@ export class QueueService {
   ) {}
 
   async enqueueOrder(orderId: string): Promise<void> {
-    await this.orderQueue.add('process-order', { orderId }, {
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 5000,
+    await this.orderQueue.add(
+      'process-order',
+      { orderId },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
       },
-    });
+    );
     this.logger.log(`Order ${orderId} enqueued for processing`);
   }
 
@@ -59,10 +63,7 @@ export class QueueService {
     notifications: QueueMetrics;
     aggregated: QueueMetrics;
   }> {
-    const [
-      orderMetrics,
-      notificationMetrics,
-    ] = await Promise.all([
+    const [orderMetrics, notificationMetrics] = await Promise.all([
       this.getQueueMetrics(this.orderQueue),
       this.getQueueMetrics(this.notificationQueue),
     ]);
@@ -98,15 +99,21 @@ export class QueueService {
     };
   }
 
-  
-  async enqueueNotification(orderId: string, type: 'order_received' | 'order_enriched' | 'order_failed'): Promise<void> {
-    await this.notificationQueue.add('send-notification', { orderId, type }, {
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 2000,
+  async enqueueNotification(
+    orderId: string,
+    type: 'order_received' | 'order_enriched' | 'order_failed',
+  ): Promise<void> {
+    await this.notificationQueue.add(
+      'send-notification',
+      { orderId, type },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
       },
-    });
+    );
     this.logger.log(`Order ${orderId} enqueued for ${type} notification`);
   }
 
@@ -124,16 +131,12 @@ export class QueueService {
     const { state = 'waiting', page = 1, limit = 20 } = query;
     const offset = (page - 1) * limit;
 
-    const jobs = await queue.getJobs(
-      state as any,
-      offset,
-      limit
-    );
+    const jobs = await queue.getJobs(state, offset, limit);
 
     const total = await queue.getJobCounts();
 
     return {
-      jobs: jobs.map(job => ({
+      jobs: jobs.map((job) => ({
         id: job.id,
         name: job.name,
         data: job.data,
@@ -155,7 +158,7 @@ export class QueueService {
   private getQueueByName(queueName: string): Queue {
     const queues = {
       'order-processing': this.orderQueue,
-      'notifications': this.notificationQueue,
+      notifications: this.notificationQueue,
     };
 
     const queue = queues[queueName as keyof typeof queues];
@@ -167,6 +170,6 @@ export class QueueService {
   }
 
   async healthCheck(): Promise<void> {
-        await this.orderQueue.getJobCounts();
+    await this.orderQueue.getJobCounts();
   }
 }

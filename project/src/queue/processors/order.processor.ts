@@ -40,14 +40,16 @@ export class OrderProcessor {
       setTimeout(async () => {
         await this.checkEnrichmentCompletion(orderId);
       }, 10000);
-
     } catch (error) {
       this.logger.error(`Failed to process order ${orderId}:`, error.message);
-      
-      await this.orderRepository.updateStatus(orderId, OrderStatus.FAILED_ENRICHMENT);
-      
+
+      await this.orderRepository.updateStatus(
+        orderId,
+        OrderStatus.FAILED_ENRICHMENT,
+      );
+
       await this.queueService.enqueueNotification(orderId, 'order_failed');
-      
+
       throw error;
     }
   }
@@ -56,12 +58,17 @@ export class OrderProcessor {
     try {
       // For demo purposes, we'll assume enrichment is complete
       await this.orderRepository.updateStatus(orderId, OrderStatus.ENRICHED);
-      
+
       await this.queueService.enqueueNotification(orderId, 'order_enriched');
-      
-      this.logger.log(`Order ${orderId} enrichment completed and status updated to ENRICHED`);
+
+      this.logger.log(
+        `Order ${orderId} enrichment completed and status updated to ENRICHED`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to complete enrichment for order ${orderId}:`, error.message);
+      this.logger.error(
+        `Failed to complete enrichment for order ${orderId}:`,
+        error.message,
+      );
     }
   }
 
