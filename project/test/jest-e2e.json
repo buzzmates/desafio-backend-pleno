@@ -5,5 +5,15 @@
   "testRegex": "\\.e2e-spec\\.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "verbose": false,
+  "silent": true,
+  "errorOnDeprecated": false,
+  "notify": false,
+  "bail": false,
+  "clearMocks": true,
+  "resetMocks": true,
+  "restoreMocks": true,
+  "reporters": ["default"],
+  "maxWorkers": 1
 }
