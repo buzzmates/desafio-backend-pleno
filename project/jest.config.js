@@ -1,13 +1,12 @@
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: 'ts-jest/presets/default-esm',
+  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/test'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      tsconfig: 'tsconfig.spec.json',
-      useESM: true
+      tsconfig: 'tsconfig.spec.json'
     }],
   },
   collectCoverageFrom: [
@@ -21,7 +20,6 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!@faker-js/faker)'
   ],
-  extensionsToTreatAsEsm: ['.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   verbose: false,
   silent: true,

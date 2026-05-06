@@ -7,7 +7,7 @@ import { Redis } from 'ioredis';
 
 /**
  * Integration Test Setup
- * Uses Docker Compose for PostgreSQL and Redis containers
+ * Uses local PostgreSQL and Redis services
  */
 
 export interface IntegrationTestContainer {
@@ -19,7 +19,7 @@ export interface IntegrationTestContainer {
 let testContainer: IntegrationTestContainer | null = null;
 
 /**
- * Sets up integration test environment with real PostgreSQL and Redis
+ * Sets up integration test environment with local PostgreSQL and Redis
  */
 export const setupIntegrationTest =
   async (): Promise<IntegrationTestContainer> => {
@@ -27,38 +27,30 @@ export const setupIntegrationTest =
       return testContainer;
     }
 
-    console.log('Starting integration test containers...');
+    console.log('Setting up integration test environment...');
 
-    // Start Docker containers for integration tests
+    // Use local services for integration tests
     try {
-      execSync('docker-compose -f docker-compose.test.yml up -d', {
-        stdio: 'inherit',
-        cwd: process.cwd(),
-      });
-
       // Wait for services to be ready
       await waitForPostgres();
       await waitForRedis();
 
       const postgresUrl =
-        'postgresql://postgres:password@localhost:5433/orders_test_db';
-      const redisUrl = 'redis://localhost:6380';
+        'postgresql://postgres:password@localhost:5432/orders_test_db';
+      const redisUrl = 'redis://localhost:6379';
 
       testContainer = {
         postgresUrl,
         redisUrl,
         cleanup: async () => {
-          console.log('Cleaning up integration test containers...');
-          execSync('docker-compose -f docker-compose.test.yml down -v', {
-            stdio: 'inherit',
-            cwd: process.cwd(),
-          });
+          console.log('Cleaning up integration test environment...');
+          // No containers to stop, just clean up test data
         },
       };
 
       return testContainer;
     } catch (error) {
-      console.error('Failed to start integration test containers:', error);
+      console.error('Failed to setup integration test environment:', error);
       throw error;
     }
   };
@@ -103,7 +95,7 @@ const waitForPostgres = async (maxAttempts = 30): Promise<void> => {
       const { Client } = require('pg');
       const client = new Client({
         connectionString:
-          'postgresql://postgres:password@localhost:5433/orders_test_db',
+          'postgresql://postgres:password@localhost:5432/orders_test_db',
       });
 
       await client.connect();
@@ -127,7 +119,7 @@ const waitForPostgres = async (maxAttempts = 30): Promise<void> => {
 const waitForRedis = async (maxAttempts = 30): Promise<void> => {
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const redis = new Redis('redis://localhost:6380');
+      const redis = new Redis('redis://localhost:6379');
       await redis.ping();
       await redis.disconnect();
 
