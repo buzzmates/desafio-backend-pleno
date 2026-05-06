@@ -48,18 +48,112 @@ $ npm run start:prod
 
 ```bash
 # unit tests
-$ npm run test
+$ npm test
+```
 
-# e2e tests
-$ npm run test:e2e
+## Testing Coverage
 
-# test coverage
-$ npm run test:cov
+This project includes comprehensive unit tests for all major components:
+
+### Service Layer Tests
+- **WebhooksService** (`src/webhooks/webhooks.service.spec.ts`) - 10 tests covering order processing, idempotency, error handling, and queue integration
+- **OrdersService** (`src/orders/orders.service.spec.ts`) - 7 tests covering order retrieval, pagination, filtering, and error scenarios  
+- **QueueService** (`src/queue/queue.service.spec.ts`) - 27 tests covering queue operations, metrics, notifications, and health checks
+
+### DTO Validation Tests
+- **CreateOrderDto** (`src/webhooks/dto/create-order.dto.spec.ts`) - 22 tests covering webhook payload validation, nested objects, and edge cases
+- **OrderQueryDto** (`src/orders/dto/order-query.dto.spec.ts`) - 36 tests covering query parameters, type transformation, and validation rules
+
+### Test Infrastructure
+- Jest configuration with reflect-metadata polyfill for class-validator
+- Mock implementations using Jest for all external dependencies
+- Comprehensive test data factories and utilities
+- Proper TypeScript typing throughout all test suites
+
+### Running Tests
+```bash
+# Run all tests
+npm test
+
+# Run specific test suites
+npm test -- --testPathPattern="webhooks.service.spec.ts"
+npm test -- --testPathPattern="orders.service.spec.ts"  
+npm test -- --testPathPattern="queue.service.spec.ts"
+npm test -- --testPathPattern="create-order.dto.spec.ts"
+npm test -- --testPathPattern="order-query.dto.spec.ts"
+```
+
+## Local Development
+
+This project includes everything needed for local development.
+
+### Prerequisites
+- Node.js 20+
+- PostgreSQL 16+
+- Redis 7+
+
+### Quick Start
+
+1. Copy environment file:
+```bash
+cp .env.example .env
+```
+
+2. Update variables in `.env` as needed for your setup
+
+3. Install dependencies:
+```bash
+npm install
+```
+
+4. Start PostgreSQL and Redis services locally
+
+5. Generate Prisma client:
+```bash
+npm run prisma:generate
+```
+
+6. Run database migrations:
+```bash
+npm run prisma:migrate
+```
+
+7. Start the application:
+```bash
+# development
+npm run start
+
+# watch mode
+npm run start:dev
+
+# production mode
+npm run start:prod
+```
+
+### Database Management
+
+```bash
+# Generate Prisma client
+npm run prisma:generate
+
+# Run migrations
+npm run prisma:migrate
+
+# Reset database
+npm run db:reset
+
+# Open Prisma Studio
+npm run prisma:studio
 ```
 
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+
+### Prerequisites for Production
+- PostgreSQL database (cloud or self-hosted)
+- Redis instance (cloud or self-hosted)
+- Environment variables configured for production
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
